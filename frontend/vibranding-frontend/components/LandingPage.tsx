@@ -120,13 +120,15 @@ export default function LandingPage({ onStartBranding }: LandingPageProps) {
             className="flex-shrink-0"
             onMouseEnter={() => setIsLogoHovered(true)}
             onMouseLeave={() => setIsLogoHovered(false)}
+            style={{ width: '400px', height: '400px', position: 'relative' }}
           >
             <Image
               src={isLogoHovered ? "/logo0.png" : "/logo.png"}
               alt="Vibranding Logo"
-              width={1000}
-              height={1000}
-              className="w-auto h-auto max-w-full"
+              width={400}
+              height={400}
+              className="w-full h-full object-contain"
+              style={{ width: '400px', height: '400px' }}
               priority
             />
           </div>

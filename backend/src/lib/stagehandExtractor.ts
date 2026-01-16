@@ -9,9 +9,9 @@ const BrandAssetsSchema = z.object({
   
   // Logo related
   logos: z.array(z.object({
-    url: z.string().url().describe("URL of the logo image"),
+    url: z.string().describe("URL or identifier of the logo image"),
     alt: z.string().optional().describe("Alt text of the logo"),
-    type: z.enum(["primary_logo", "secondary_logo", "favicon", "wordmark", "icon"]).describe("Type of logo")
+    type: z.string().describe("Type of logo (primary_logo, secondary_logo, favicon, wordmark, icon, etc)")
   })).describe("All logo images found on the page"),
   
   // Color palette
@@ -23,13 +23,13 @@ const BrandAssetsSchema = z.object({
   // Typography
   typography: z.array(z.object({
     font_family: z.string().describe("Font family name"),
-    usage: z.enum(["heading", "body", "accent", "navigation"]).describe("Where this font is used"),
+    usage: z.string().describe("Where this font is used (heading, body, accent, navigation, etc)"),
     sample_text: z.string().optional().describe("Example text using this font")
   })).describe("Fonts used on the page"),
   
   // UI Components
   components: z.array(z.object({
-    type: z.enum(["button", "card", "form", "input", "navigation", "footer", "header"]).describe("Component type"),
+    type: z.string().describe("Component type (button, card, form, input, navigation, footer, header, etc)"),
     description: z.string().describe("Brief description of the component"),
     screenshot_selector: z.string().optional().describe("CSS selector to capture this component")
   })).describe("UI components identified on the page"),
@@ -39,25 +39,25 @@ const BrandAssetsSchema = z.object({
     headline: z.string().optional().describe("Main headline text"),
     subheadline: z.string().optional().describe("Subheadline or tagline"),
     cta_text: z.string().optional().describe("Call-to-action button text"),
-    cta_url: z.string().url().optional().describe("CTA link URL"),
+    cta_url: z.string().optional().describe("CTA link URL"),
     background_type: z.enum(["image", "video", "gradient", "solid", "pattern"]).optional().describe("Type of hero background"),
-    background_url: z.string().url().optional().describe("Hero background image/video URL if applicable")
+    background_url: z.string().optional().describe("Hero background image/video URL if applicable")
   }).optional().describe("Hero section details if present"),
   
   // All images for further classification
   images: z.array(z.object({
-    url: z.string().url().describe("Image URL"),
+    url: z.string().describe("Image URL or identifier"),
     alt: z.string().optional().describe("Alt text"),
     context: z.string().optional().describe("Where on the page this image appears")
   })).describe("All significant images on the page"),
   
   // Brand summary
-  brand_mood: z.enum(["professional", "playful", "minimal", "bold", "elegant", "tech", "organic", "corporate", "creative"]).optional().describe("Overall brand mood/feeling"),
+  brand_mood: z.string().optional().describe("Overall brand mood/feeling (e.g. professional, playful, minimal, bold, elegant, tech, organic, corporate, creative)"),
   
   // Links
   social_links: z.array(z.object({
     platform: z.string().describe("Social platform name"),
-    url: z.string().url().describe("Link URL")
+    url: z.string().describe("Link URL or identifier")
   })).optional().describe("Social media links found"),
   
   contact_info: z.object({

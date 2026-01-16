@@ -2,7 +2,7 @@ import "dotenv/config";
 import { z } from "zod";
 
 const envSchema = z.object({
-  PORT: z.coerce.number().int().positive().default(3000),
+  PORT: z.coerce.number().int().positive().default(3001),
   ANTHROPIC_API_KEY: z.string().min(1),
   GEMINI_API_KEY: z.string().optional(),
   // Stagehand can run locally (LOCAL) or via Browserbase (BROWSERBASE)

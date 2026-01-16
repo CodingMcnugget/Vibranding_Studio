@@ -10,3 +10,16 @@ try {
   app.log.error({ err }, "Failed to start server");
   process.exit(1);
 }
+
+// Handle Vite HMR (Hot Module Replacement)
+if (import.meta.hot) {
+  import.meta.hot.on("vite:beforeFullReload", async () => {
+    app.log.info("Closing server before HMR reload...");
+    await app.close();
+  });
+
+  import.meta.hot.dispose(async () => {
+    app.log.info("Closing server on HMR dispose...");
+    await app.close();
+  });
+}

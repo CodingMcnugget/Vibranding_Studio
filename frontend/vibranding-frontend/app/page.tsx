@@ -5,9 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+// Placeholder backend URL - update this when backend is ready
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
 export default function Home() {
   const [productDescription, setProductDescription] = useState("");
-  const [references, setReferences] = useState([""]);
+  const [references, setReferences] = useState(["", ""]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const addReference = () => {
+    setReferences([...references, ""]);
+  };
 
   const updateReference = (index: number, value: string) => {
     const newReferences = [...references];
@@ -30,15 +39,43 @@ export default function Home() {
     setReferences(newReferences);
   };
 
-  const handleSubmit = () => {
-    // Filter out empty references when submitting
-    const filledReferences = references.filter(ref => ref.trim() !== "");
-    console.log({ productDescription, references: filledReferences });
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    // Filter out empty references
+    const validReferences = references.filter((ref) => ref.trim() !== "");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/branding`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          product: productDescription,
+          urls: validReferences,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log("Backend response:", data);
+      // TODO: Handle successful response (navigate to results, show preview, etc.)
+    } catch (err) {
+      console.error("Error submitting:", err);
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen w-full bg-gray-100 py-16 px-8">
-      <div className="mx-auto max-w-[95%] space-y-6">
+    <div className="min-h-screen w-full bg-linear-to-br from-teal-100 via-emerald-50 to-cyan-100 py-10 px-4">
+      <div className="mx-auto max-w-3xl space-y-8">
         {/* Step 1: Product Description */}
         <div className="rounded-2xl bg-white p-12">
           <div className="mb-8">
@@ -94,14 +131,21 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="text-center text-red-500 font-medium">
+            {error}
+          </div>
+        )}
+
         {/* Submit Button */}
         <div className="flex justify-center pt-4">
           <Button
             onClick={handleSubmit}
-            className="h-14 px-12 rounded-full bg-black text-white font-medium hover:bg-black/90 shadow-none"
-            style={{ fontSize: '16px', fontFamily: 'inherit' }}
+            disabled={isLoading || !productDescription.trim()}
+            className="h-16 px-10 rounded-full bg-black text-white text-lg font-medium hover:bg-black/90 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Start Branding
+            {isLoading ? "Processing..." : "Start Branding"}
           </Button>
         </div>
       </div>

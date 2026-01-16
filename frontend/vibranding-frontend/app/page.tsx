@@ -5,52 +5,42 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import LoadingState from "@/components/LoadingState";
 
-// Backend API URL - defaults to port 3001 where backend runs
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-interface SessionInfo {
-  sessionId?: string;
-  sessionUrl?: string;
-  debugUrl?: string;
-}
-
-interface UrlProgress {
-  url: string;
-  status: "pending" | "extracting" | "classifying" | "complete" | "error";
-  session?: SessionInfo;
-  error?: string;
-}
+// Placeholder backend URL - update this when backend is ready
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export default function Home() {
   const router = useRouter();
   const [productDescription, setProductDescription] = useState("");
-  const [references, setReferences] = useState(["", ""]);
+  const [references, setReferences] = useState<string[]>([]);
+  const [newReference, setNewReference] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  const [urlProgress, setUrlProgress] = useState<UrlProgress[]>([]);
-  const [activeSession, setActiveSession] = useState<SessionInfo | null>(null);
+  const [loadingStep, setLoadingStep] = useState<"summary" | "color" | "typography" | "components" | "landing" | "logo">("summary");
+  const [loadingDescription, setLoadingDescription] = useState<string>("This is the description.");
 
-  const updateReference = (index: number, value: string) => {
-    const newReferences = [...references];
-    newReferences[index] = value;
-    
-    // If user is typing in the last field and it's not empty, add a new empty field
-    if (index === references.length - 1 && value.trim() !== "") {
-      newReferences.push("");
+  const addReference = () => {
+    if (newReference.trim() !== "") {
+      setReferences([...references, newReference.trim()]);
+      setNewReference("");
     }
-    
-    setReferences(newReferences);
+  };
+
+  const handleNewReferenceChange = (value: string) => {
+    setNewReference(value);
+  };
+
+  const handleNewReferenceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addReference();
+    }
   };
 
   const deleteReference = (index: number) => {
-    const newReferences = references.filter((_, i) => i !== index);
-    // Ensure at least one empty field remains
-    if (newReferences.length === 0 || newReferences.every(ref => ref.trim() !== "")) {
-      newReferences.push("");
-    }
-    setReferences(newReferences);
+    setReferences(references.filter((_, i) => i !== index));
   };
 
   const handleSubmitWithStream = useCallback(async () => {
@@ -59,119 +49,13 @@ export default function Home() {
     setLoadingStep("Starting extraction...");
     setActiveSession(null);
 
-    const validReferences = references.filter((ref) => ref.trim() !== "");
-    
-    // Initialize progress for all URLs
-    setUrlProgress(validReferences.map(url => ({ url, status: "pending" })));
-
-    const requestBody = {
-      product: productDescription,
-      urls: validReferences,
-    };
-
-    console.log("=== STREAMING BRANDING EXTRACTION ===");
-    console.log("URL:", `${API_BASE_URL}/branding/stream`);
+    // Include the new reference if it's not empty
+    const validReferences = newReference.trim() !== "" 
+      ? [...references, newReference.trim()]
+      : references;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/branding/stream`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Stream request failed: ${response.statusText}`);
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let brandingData: any = null;
-
-      if (reader) {
-        let buffer = "";
-        
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (line.startsWith("event: ")) {
-              const eventType = line.slice(7);
-              continue;
-            }
-            if (line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                
-                // Handle different event types
-                if (data.session) {
-                  // Session ready event
-                  console.log("Session ready:", data.session);
-                  setActiveSession(data.session);
-                  setUrlProgress(prev => prev.map((p, i) => 
-                    i === data.index ? { ...p, session: data.session, status: "extracting" } : p
-                  ));
-                } else if (data.index !== undefined && data.url) {
-                  // URL progress events
-                  if (data.success !== undefined) {
-                    // URL complete
-                    setUrlProgress(prev => prev.map((p, i) => 
-                      i === data.index ? { 
-                        ...p, 
-                        status: data.success ? "complete" : "error",
-                        error: data.error 
-                      } : p
-                    ));
-                  } else if (data.imageCount !== undefined) {
-                    // Classifying
-                    setLoadingStep(`Classifying ${data.imageCount} images...`);
-                    setUrlProgress(prev => prev.map((p, i) => 
-                      i === data.index ? { ...p, status: "classifying" } : p
-                    ));
-                  } else {
-                    // URL start
-                    setLoadingStep(`Extracting from ${new URL(data.url).hostname}...`);
-                    setUrlProgress(prev => prev.map((p, i) => 
-                      i === data.index ? { ...p, status: "extracting" } : p
-                    ));
-                  }
-                } else if (data.results) {
-                  // Final complete event
-                  brandingData = data;
-                  console.log("Extraction complete:", data);
-                }
-              } catch (e) {
-                console.warn("Failed to parse SSE data:", line);
-              }
-            }
-          }
-        }
-      }
-
-      if (!brandingData) {
-        throw new Error("No data received from stream");
-      }
-
-      // Step 2: Generate personalized slides with Claude
-      setLoadingStep("AI is crafting your brand presentation...");
-      setActiveSession(null);
-
-      const successfulResult = brandingData.results?.find((r: { success: boolean }) => r.success);
-      const brandData = successfulResult?.data || {};
-      const sourceUrls = brandingData.results
-        ?.filter((r: { success: boolean }) => r.success)
-        .map((r: { url: string }) => r.url) || [];
-
-      console.log("=== GENERATING SLIDES ===");
-      const slidesRes = await fetch(`${API_BASE_URL}/generate-slides`, {
+      const response = await fetch(`${API_BASE_URL}/branding`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -190,13 +74,19 @@ export default function Home() {
         throw new Error(slidesData.error || `Slide generation failed`);
       }
 
-      // Store and redirect
-      localStorage.setItem("brandingResponse", JSON.stringify({
-        ...brandingData,
-        generatedSlides: slidesData.slides,
-      }));
+      const data = await response.json();
+      console.log("Backend response:", data);
       
-      router.push("/results");
+      // Update loading step and description based on backend response
+      // For now, using placeholder logic - update this based on your API response structure
+      if (data.step) {
+        setLoadingStep(data.step);
+      }
+      if (data.description) {
+        setLoadingDescription(data.description);
+      }
+      
+      // TODO: Handle successful response (navigate to results, show preview, etc.)
     } catch (err) {
       console.error("=== ERROR ===", err);
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -204,11 +94,15 @@ export default function Home() {
       setLoadingStep("");
       setActiveSession(null);
     }
-  }, [productDescription, references, router]);
+  };
+
+  if (isLoading) {
+    return <LoadingState step={loadingStep} description={loadingDescription} />;
+  }
 
   return (
-    <div className="min-h-screen w-full bg-linear-to-br from-teal-100 via-emerald-50 to-cyan-100 py-10 px-4">
-      <div className="mx-auto max-w-3xl space-y-8">
+    <div className="min-h-screen w-full bg-gray-100 py-16 px-8">
+      <div className="mx-auto max-w-[95%] space-y-6">
         {/* Step 1: Product Description */}
         <div className="rounded-2xl bg-white p-12">
           <div className="mb-8">
@@ -235,32 +129,38 @@ export default function Home() {
             </h2>
           </div>
           <div className="space-y-4">
-            {references.map((ref, index) => {
-              const isEmpty = ref.trim() === "";
-              const showDelete = !isEmpty;
-              
-              return (
-                <div key={index} className="relative group">
-                  <Input
-                    placeholder="Paste URL here"
-                    value={ref}
-                    onChange={(e) => updateReference(index, e.target.value)}
-                    className={`h-12 w-full rounded-full border border-gray-300 bg-white px-5 placeholder:text-gray-400 focus-visible:border-gray-400 focus-visible:ring-0 focus-visible:outline-none shadow-none ${showDelete ? 'pr-12' : ''}`}
-                    style={{ fontSize: '16px', fontFamily: 'inherit' }}
-                  />
-                  {showDelete && (
-                    <button
-                      onClick={() => deleteReference(index)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ fontSize: '18px', lineHeight: '1' }}
-                      aria-label="Delete reference"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+            {/* Display filled references first */}
+            {references.map((ref, index) => (
+              <div key={index} className="relative group">
+                <Input
+                  value={ref}
+                  readOnly
+                  className="h-12 w-full rounded-full border border-gray-300 bg-white px-5 pr-12 text-gray-900 focus-visible:border-gray-400 focus-visible:ring-0 focus-visible:outline-none shadow-none"
+                  style={{ fontSize: '16px', fontFamily: 'inherit' }}
+                />
+                <button
+                  onClick={() => deleteReference(index)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ fontSize: '18px', lineHeight: '1' }}
+                  aria-label="Delete reference"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            
+            {/* Empty "Paste URL here" field at the bottom */}
+            <div className="relative">
+              <Input
+                placeholder="Paste URL here"
+                value={newReference}
+                onChange={(e) => handleNewReferenceChange(e.target.value)}
+                onKeyDown={handleNewReferenceKeyDown}
+                onBlur={addReference}
+                className="h-12 w-full rounded-full border border-gray-300 bg-white px-5 placeholder:text-gray-400 focus-visible:border-gray-400 focus-visible:ring-0 focus-visible:outline-none shadow-none"
+                style={{ fontSize: '16px', fontFamily: 'inherit' }}
+              />
+            </div>
           </div>
         </div>
 

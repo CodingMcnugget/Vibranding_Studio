@@ -69,7 +69,24 @@ const BrandAssetsSchema = z.object({
 
 export type BrandAssets = z.infer<typeof BrandAssetsSchema>;
 
-export async function extractBrandAssets(url: string): Promise<BrandAssets> {
+export interface ExtractionSession {
+  sessionId?: string;
+  sessionUrl?: string;
+  debugUrl?: string;
+}
+
+export interface ExtractionResult {
+  session: ExtractionSession;
+  assets: BrandAssets;
+}
+
+// Callback for session ready event
+export type OnSessionReady = (session: ExtractionSession) => void;
+
+export async function extractBrandAssets(
+  url: string,
+  onSessionReady?: OnSessionReady
+): Promise<ExtractionResult> {
   const stagehand = new Stagehand({
     env: config.stagehand.env,
     apiKey: config.stagehand.browserbaseApiKey,
@@ -80,8 +97,24 @@ export async function extractBrandAssets(url: string): Promise<BrandAssets> {
     }
   });
 
+  const session: ExtractionSession = {};
+
   try {
     await stagehand.init();
+    
+    // Capture Browserbase session info for live preview
+    if (config.stagehand.env === "BROWSERBASE") {
+      session.sessionId = stagehand.browserbaseSessionID;
+      session.sessionUrl = stagehand.browserbaseSessionURL;
+      session.debugUrl = `https://browserbase.com/sessions/${stagehand.browserbaseSessionID}`;
+      
+      console.log(`Browserbase session started: ${session.debugUrl}`);
+      
+      // Notify caller that session is ready (for streaming)
+      if (onSessionReady) {
+        onSessionReady(session);
+      }
+    }
     
     // Navigate to the URL (with increased timeout for slow sites)
     await stagehand.page.goto(url, { 
@@ -109,15 +142,12 @@ export async function extractBrandAssets(url: string): Promise<BrandAssets> {
         schema: BrandAssetsSchema
       });
 
-      return assets;
-    } catch (extractError: any) {
+      return { session, assets };
+    } catch (extractError: unknown) {
       // Stagehand sometimes throws "Failed to parse server response" even when data is extracted successfully
-      // Try to extract the actual data from the error context
-      if (extractError.message?.includes("Failed to parse server response")) {
-        // Check if the error object contains the actual extracted data
-        const errorStr = extractError.stack || extractError.toString();
-        // Return empty data as fallback - the extraction did work but parsing failed
-        console.warn("Stagehand parse error, extraction may have succeeded:", extractError.message);
+      const error = extractError as Error;
+      if (error.message?.includes("Failed to parse server response")) {
+        console.warn("Stagehand parse error, extraction may have succeeded:", error.message);
       }
       throw extractError;
     }

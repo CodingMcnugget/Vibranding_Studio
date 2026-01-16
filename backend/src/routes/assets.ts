@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { extractBrandAssets, type BrandAssets } from "../lib/stagehandExtractor.js";
+import { extractBrandAssets } from "../lib/stagehandExtractor.js";
 import { AssetClassifier } from "../lib/assetClassifier.js";
 
 const AssetsBodySchema = z.object({
@@ -21,7 +21,7 @@ export const assetsRoutes: FastifyPluginAsync<RouteOptions> = async (app, option
       // Step 1: Extract brand assets using Stagehand
       request.log.info({ url }, "Starting brand asset extraction with Stagehand");
       
-      const assets = await extractBrandAssets(url);
+      const { session, assets } = await extractBrandAssets(url);
 
       // Step 2: If classify is enabled, use Claude to further classify images
       if (classify && assets.images && assets.images.length > 0) {
@@ -45,6 +45,7 @@ export const assetsRoutes: FastifyPluginAsync<RouteOptions> = async (app, option
 
         return reply.send({
           ok: true,
+          session,
           data: {
             page_title: assets.page_title,
             meta_description: assets.meta_description,
@@ -87,6 +88,7 @@ export const assetsRoutes: FastifyPluginAsync<RouteOptions> = async (app, option
       // Return without image classification
       return reply.send({
         ok: true,
+        session,
         data: {
           page_title: assets.page_title,
           meta_description: assets.meta_description,

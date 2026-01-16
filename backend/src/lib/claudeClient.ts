@@ -199,6 +199,175 @@ Return ONLY valid JSON:
 
     return results;
   }
+
+  async generateSlides(
+    productDescription: string,
+    brandData: Record<string, unknown>,
+    sourceUrls: string[]
+  ): Promise<GeneratedSlides> {
+    const prompt = `You are a world-class brand strategist and designer. Analyze the extracted brand reference data and create a personalized brand presentation for a new product.
+
+## USER'S PRODUCT
+${productDescription}
+
+## REFERENCE BRAND DATA (extracted from ${sourceUrls.join(", ")})
+${JSON.stringify(brandData, null, 2)}
+
+## YOUR TASK
+Create a 4-slide brand presentation that:
+1. Identifies the MOST RELEVANT and HIGH-QUALITY elements from the reference
+2. ADAPTS them specifically for the user's product (${productDescription})
+3. Provides actionable, personalized recommendations
+
+Think about the product context:
+- If it's a beverage (water, matcha, coffee), focus on freshness, natural colors, clean typography
+- If it's tech/SaaS, focus on modern, minimal, professional elements
+- If it's lifestyle/fashion, focus on elegance, photography, bold typography
+- Match the mood to what makes sense for THEIR product, not just copying the reference
+
+Return ONLY valid JSON with this exact structure:
+{
+  "product_name": "suggested brand name or use what user provided",
+  "tagline": "a catchy tagline for their product (max 8 words)",
+  "brand_story": "2-3 sentence brand narrative tailored to their product",
+  "slides": {
+    "overview": {
+      "slide_number": 1,
+      "title": "Brand Overview",
+      "subtitle": "personalized subtitle about their product",
+      "key_points": ["3-5 key brand positioning points tailored to their product"],
+      "visual_suggestion": "what visual should go here",
+      "accent_color": "hex color that fits their product"
+    },
+    "visual_identity": {
+      "slide_number": 2,
+      "title": "Visual Identity",
+      "subtitle": "personalized subtitle",
+      "key_points": ["3-5 points about colors, logo direction, visual style - adapted for their product"],
+      "visual_suggestion": "what to show",
+      "accent_color": "hex color"
+    },
+    "typography_voice": {
+      "slide_number": 3,
+      "title": "Typography & Voice",
+      "subtitle": "personalized subtitle",
+      "key_points": ["3-5 points about fonts, tone of voice, writing style - adapted for their product"],
+      "visual_suggestion": "what to show",
+      "accent_color": "hex color"
+    },
+    "brand_assets": {
+      "slide_number": 4,
+      "title": "Brand Applications",
+      "subtitle": "personalized subtitle",
+      "key_points": ["3-5 points about how to apply the brand - specific to their product type"],
+      "visual_suggestion": "what to show",
+      "accent_color": "hex color"
+    }
+  },
+  "recommendations": [
+    "5-7 specific, actionable recommendations for their brand (be specific to their product!)"
+  ],
+  "color_palette": {
+    "primary": "hex - main brand color suited for their product",
+    "secondary": "hex - complementary color",
+    "accent": "hex - pop/accent color",
+    "background": "hex - background color",
+    "text": "hex - text color"
+  },
+  "mood_keywords": ["5-8 mood/vibe words that fit their specific product"]
+}
+
+Be creative but practical. The recommendations should be specific to "${productDescription}" - not generic branding advice.`;
+
+    try {
+      const message = await this.client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4096,
+        messages: [{ role: "user", content: prompt }]
+      });
+
+      const textBlock = message.content.find((block) => block.type === "text");
+      if (textBlock && textBlock.type === "text") {
+        const text = textBlock.text.trim();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]) as GeneratedSlides;
+        }
+      }
+
+      throw new Error("Failed to parse Claude response");
+    } catch (err) {
+      // Return a fallback structure
+      return this.generateFallbackSlides(productDescription);
+    }
+  }
+
+  private generateFallbackSlides(productDescription: string): GeneratedSlides {
+    return {
+      product_name: productDescription.split(" ").slice(0, 3).join(" "),
+      tagline: "Your brand, elevated",
+      brand_story: `A fresh take on ${productDescription}, designed to stand out in today's market.`,
+      slides: {
+        overview: {
+          slide_number: 1,
+          title: "Brand Overview",
+          subtitle: "Defining your brand identity",
+          key_points: [
+            "Establish clear brand positioning",
+            "Define your unique value proposition",
+            "Connect with your target audience"
+          ],
+          accent_color: "#4F46E5"
+        },
+        visual_identity: {
+          slide_number: 2,
+          title: "Visual Identity",
+          subtitle: "Colors, logos, and visual style",
+          key_points: [
+            "Choose colors that reflect your brand personality",
+            "Design a memorable logo",
+            "Create consistent visual language"
+          ],
+          accent_color: "#EC4899"
+        },
+        typography_voice: {
+          slide_number: 3,
+          title: "Typography & Voice",
+          subtitle: "How your brand communicates",
+          key_points: [
+            "Select fonts that match your brand personality",
+            "Develop a consistent tone of voice",
+            "Create messaging guidelines"
+          ],
+          accent_color: "#10B981"
+        },
+        brand_assets: {
+          slide_number: 4,
+          title: "Brand Applications",
+          subtitle: "Bringing your brand to life",
+          key_points: [
+            "Apply brand across all touchpoints",
+            "Create templates and guidelines",
+            "Ensure consistency in all materials"
+          ],
+          accent_color: "#F59E0B"
+        }
+      },
+      recommendations: [
+        "Start with a clear brand strategy",
+        "Invest in quality design assets",
+        "Maintain consistency across all channels"
+      ],
+      color_palette: {
+        primary: "#4F46E5",
+        secondary: "#818CF8",
+        accent: "#EC4899",
+        background: "#F9FAFB",
+        text: "#111827"
+      },
+      mood_keywords: ["modern", "professional", "approachable"]
+    };
+  }
 }
 
 export interface BrandInsights {
@@ -231,4 +400,35 @@ export interface BrandSummary {
   primary_colors: string[];
   typography_style: string | null;
   brand_personality?: string;
+}
+
+// Slide generation types
+export interface SlideContent {
+  slide_number: number;
+  title: string;
+  subtitle?: string;
+  key_points: string[];
+  visual_suggestion?: string;
+  accent_color?: string;
+}
+
+export interface GeneratedSlides {
+  product_name: string;
+  tagline: string;
+  brand_story: string;
+  slides: {
+    overview: SlideContent;
+    visual_identity: SlideContent;
+    typography_voice: SlideContent;
+    brand_assets: SlideContent;
+  };
+  recommendations: string[];
+  color_palette: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    background: string;
+    text: string;
+  };
+  mood_keywords: string[];
 }

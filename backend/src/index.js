@@ -1,8 +1,10 @@
 import "dotenv/config";
 import express from "express";
+import cors from "cors";
 import YutoriClient from "./yutoriClient.js";
 
 const app = express();
+app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
 const client = new YutoriClient({
@@ -75,6 +77,64 @@ const normalizeList = (items) =>
         .filter(Boolean)
     )
   );
+
+// Branding endpoint - receives product description and reference URLs
+app.post("/branding", async (req, res) => {
+  const { product, urls } = req.body || {};
+
+  if (!product) {
+    return res.status(400).json({ error: "Missing product description" });
+  }
+
+  try {
+    // Process each URL to extract assets
+    const urlResults = [];
+    const validUrls = (urls || []).filter((url) => url && url.trim());
+
+    for (const url of validUrls) {
+      try {
+        const taskResult = await client.runBrowsingTaskAndWait({
+          task: defaultPrompt(url),
+          startUrl: url,
+          requireAuth: false,
+          pollIntervalMs: 2500,
+          timeoutMs: 120000
+        });
+
+        const output = extractOutput(taskResult);
+        if (output.assets) {
+          output.assets = output.assets.filter((asset) => asset?.url);
+        }
+        if (output.images) {
+          output.images = output.images.filter((img) => img?.url);
+        }
+        if (output.links) {
+          output.links = output.links.filter((link) => link?.url);
+        }
+
+        output.image_srcsets = normalizeList(output.image_srcsets);
+        output.scripts = normalizeList(output.scripts);
+        output.stylesheets = normalizeList(output.stylesheets);
+        output.favicons = normalizeList(output.favicons);
+
+        urlResults.push({ url, data: output, ok: true });
+      } catch (urlErr) {
+        urlResults.push({ url, error: urlErr.message, ok: false });
+      }
+    }
+
+    return res.json({
+      ok: true,
+      product,
+      references: urlResults
+    });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: err.message
+    });
+  }
+});
 
 app.post("/assets", async (req, res) => {
   const { url, requireAuth, pollIntervalMs, timeoutMs } = req.body || {};

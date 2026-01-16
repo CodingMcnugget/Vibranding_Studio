@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import LoadingState from "@/components/LoadingState";
+import LandingPage from "@/components/LandingPage";
 
 // Placeholder backend URL - update this when backend is ready
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export default function Home() {
-  const router = useRouter();
+  const [showLanding, setShowLanding] = useState(true);
   const [productDescription, setProductDescription] = useState("");
   const [references, setReferences] = useState<string[]>([]);
   const [newReference, setNewReference] = useState("");
@@ -98,6 +99,10 @@ export default function Home() {
 
   if (isLoading) {
     return <LoadingState step={loadingStep} description={loadingDescription} />;
+  }
+
+  if (showLanding) {
+    return <LandingPage onStartBranding={() => setShowLanding(false)} />;
   }
 
   return (

@@ -1,6 +1,6 @@
 # Backend
 
-Minimal Express server that calls Yutori Browsing API to extract rich assets
+Fastify + TypeScript server that calls Yutori Browsing API to extract rich assets
 from a given URL.
 
 ## Setup
@@ -14,8 +14,15 @@ Set env vars before running:
 ## Run
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
+```
+
+## Build
+
+```bash
+pnpm run build
+pnpm start
 ```
 
 ## Usage

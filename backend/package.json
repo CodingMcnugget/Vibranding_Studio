@@ -1,16 +1,24 @@
 {
-  "name": "yutori-asset-scraper-backend",
+  "name": "vibranding-backend",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node src/index.js",
-    "start": "node src/index.js"
+    "dev": "vite-node --watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
+    "@anthropic-ai/sdk": "^0.32.0",
+    "@browserbasehq/stagehand": "2.5.6",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "node-fetch": "^3.3.2"
+    "fastify": "^4.27.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vite": "^7.3.1",
+    "vite-node": "^3.1.0"
   }
 }

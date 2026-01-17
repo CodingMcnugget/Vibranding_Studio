@@ -205,79 +205,69 @@ Return ONLY valid JSON:
     brandData: Record<string, unknown>,
     sourceUrls: string[]
   ): Promise<GeneratedSlides> {
-    const prompt = `You are a world-class brand strategist and designer. Analyze the extracted brand reference data and create a personalized brand presentation for a new product.
+    const prompt = `You are a design system expert creating a minimal, visual brand deck. Create a 4-slide design system presentation.
 
-## USER'S PRODUCT
+## PRODUCT
 ${productDescription}
 
-## REFERENCE BRAND DATA (extracted from ${sourceUrls.join(", ")})
+## REFERENCE DATA
 ${JSON.stringify(brandData, null, 2)}
 
-## YOUR TASK
-Create a 4-slide brand presentation that:
-1. Identifies the MOST RELEVANT and HIGH-QUALITY elements from the reference
-2. ADAPTS them specifically for the user's product (${productDescription})
-3. Provides actionable, personalized recommendations
+## RULES
+- Create a CREATIVE brand name that fits the product (e.g., "Matcha" → "Zencha", "Water bottle" → "Hydra", "Tech startup" → "Nexus")
+- MAX 4 short bullet points per slide (under 10 words each)
+- Focus on VISUAL elements: colors, typography, spacing
+- Think like Figma/design system documentation
+- Extract actual colors from reference data when available
+- Match product context (beverage=natural greens, tech=blues/purples, fashion=bold contrast)
 
-Think about the product context:
-- If it's a beverage (water, matcha, coffee), focus on freshness, natural colors, clean typography
-- If it's tech/SaaS, focus on modern, minimal, professional elements
-- If it's lifestyle/fashion, focus on elegance, photography, bold typography
-- Match the mood to what makes sense for THEIR product, not just copying the reference
-
-Return ONLY valid JSON with this exact structure:
+Return ONLY valid JSON:
 {
-  "product_name": "suggested brand name or use what user provided",
-  "tagline": "a catchy tagline for their product (max 8 words)",
-  "brand_story": "2-3 sentence brand narrative tailored to their product",
+  "product_name": "creative brand name that captures the product essence (1-2 words, memorable)",
+  "tagline": "max 6 words that describe the brand promise",
   "slides": {
     "overview": {
       "slide_number": 1,
-      "title": "Brand Overview",
-      "subtitle": "personalized subtitle about their product",
-      "key_points": ["3-5 key brand positioning points tailored to their product"],
-      "visual_suggestion": "what visual should go here",
-      "accent_color": "hex color that fits their product"
+      "title": "Brand Foundation",
+      "key_points": ["max 4 short points about brand essence"],
+      "accent_color": "#hex"
     },
     "visual_identity": {
       "slide_number": 2,
-      "title": "Visual Identity",
-      "subtitle": "personalized subtitle",
-      "key_points": ["3-5 points about colors, logo direction, visual style - adapted for their product"],
-      "visual_suggestion": "what to show",
-      "accent_color": "hex color"
+      "title": "Color System",
+      "key_points": ["max 4 short points about color usage"],
+      "accent_color": "#hex"
     },
     "typography_voice": {
       "slide_number": 3,
-      "title": "Typography & Voice",
-      "subtitle": "personalized subtitle",
-      "key_points": ["3-5 points about fonts, tone of voice, writing style - adapted for their product"],
-      "visual_suggestion": "what to show",
-      "accent_color": "hex color"
+      "title": "Typography",
+      "key_points": ["max 4 short points about type"],
+      "font_primary": "suggested primary font name",
+      "font_secondary": "suggested secondary font name",
+      "accent_color": "#hex"
     },
     "brand_assets": {
       "slide_number": 4,
-      "title": "Brand Applications",
-      "subtitle": "personalized subtitle",
-      "key_points": ["3-5 points about how to apply the brand - specific to their product type"],
-      "visual_suggestion": "what to show",
-      "accent_color": "hex color"
+      "title": "Components",
+      "key_points": ["max 4 short points about UI patterns"],
+      "accent_color": "#hex"
     }
   },
-  "recommendations": [
-    "5-7 specific, actionable recommendations for their brand (be specific to their product!)"
-  ],
   "color_palette": {
-    "primary": "hex - main brand color suited for their product",
-    "secondary": "hex - complementary color",
-    "accent": "hex - pop/accent color",
-    "background": "hex - background color",
-    "text": "hex - text color"
+    "primary": "#hex main brand color",
+    "secondary": "#hex supporting color", 
+    "accent": "#hex highlight color",
+    "background": "#hex bg color",
+    "text": "#hex text color",
+    "muted": "#hex muted/gray color"
   },
-  "mood_keywords": ["5-8 mood/vibe words that fit their specific product"]
-}
-
-Be creative but practical. The recommendations should be specific to "${productDescription}" - not generic branding advice.`;
+  "typography": {
+    "heading": "Font name for headings",
+    "body": "Font name for body",
+    "mono": "Monospace font if applicable"
+  },
+  "mood_keywords": ["3-4 words max"]
+}`;
 
     try {
       const message = await this.client.messages.create({
@@ -303,69 +293,72 @@ Be creative but practical. The recommendations should be specific to "${productD
   }
 
   private generateFallbackSlides(productDescription: string): GeneratedSlides {
+    // Generate a simple brand name from the product description
+    const words = productDescription.toLowerCase().split(" ");
+    const brandName = words.find(w => w.length > 3 && !["the", "and", "for", "with", "that", "this"].includes(w)) || "Brand";
+    const capitalizedName = brandName.charAt(0).toUpperCase() + brandName.slice(1);
+    
     return {
-      product_name: productDescription.split(" ").slice(0, 3).join(" "),
-      tagline: "Your brand, elevated",
-      brand_story: `A fresh take on ${productDescription}, designed to stand out in today's market.`,
+      product_name: capitalizedName,
+      tagline: "Designed for impact",
       slides: {
         overview: {
           slide_number: 1,
-          title: "Brand Overview",
-          subtitle: "Defining your brand identity",
+          title: "Brand Foundation",
           key_points: [
-            "Establish clear brand positioning",
-            "Define your unique value proposition",
-            "Connect with your target audience"
+            "Clear brand positioning",
+            "Distinct visual identity",
+            "Consistent experience"
           ],
           accent_color: "#4F46E5"
         },
         visual_identity: {
           slide_number: 2,
-          title: "Visual Identity",
-          subtitle: "Colors, logos, and visual style",
+          title: "Color System",
           key_points: [
-            "Choose colors that reflect your brand personality",
-            "Design a memorable logo",
-            "Create consistent visual language"
+            "Primary for key actions",
+            "Secondary for support",
+            "Accent for highlights"
           ],
           accent_color: "#EC4899"
         },
         typography_voice: {
           slide_number: 3,
-          title: "Typography & Voice",
-          subtitle: "How your brand communicates",
+          title: "Typography",
           key_points: [
-            "Select fonts that match your brand personality",
-            "Develop a consistent tone of voice",
-            "Create messaging guidelines"
+            "Headlines: Bold, impactful",
+            "Body: Clean, readable",
+            "Hierarchy through weight"
           ],
+          font_primary: "Inter",
+          font_secondary: "System UI",
           accent_color: "#10B981"
         },
         brand_assets: {
           slide_number: 4,
-          title: "Brand Applications",
-          subtitle: "Bringing your brand to life",
+          title: "Components",
           key_points: [
-            "Apply brand across all touchpoints",
-            "Create templates and guidelines",
-            "Ensure consistency in all materials"
+            "Consistent button styles",
+            "Card-based layouts",
+            "Clear visual hierarchy"
           ],
           accent_color: "#F59E0B"
         }
       },
-      recommendations: [
-        "Start with a clear brand strategy",
-        "Invest in quality design assets",
-        "Maintain consistency across all channels"
-      ],
       color_palette: {
         primary: "#4F46E5",
         secondary: "#818CF8",
         accent: "#EC4899",
-        background: "#F9FAFB",
-        text: "#111827"
+        background: "#FFFFFF",
+        text: "#111827",
+        muted: "#6B7280"
       },
-      mood_keywords: ["modern", "professional", "approachable"]
+      typography: {
+        heading: "Inter",
+        body: "Inter",
+        mono: "JetBrains Mono"
+      },
+      mood_keywords: ["modern", "minimal", "clean"]
     };
   }
 }
@@ -410,25 +403,33 @@ export interface SlideContent {
   key_points: string[];
   visual_suggestion?: string;
   accent_color?: string;
+  font_primary?: string;
+  font_secondary?: string;
 }
 
 export interface GeneratedSlides {
   product_name: string;
   tagline: string;
-  brand_story: string;
+  brand_story?: string;
   slides: {
     overview: SlideContent;
     visual_identity: SlideContent;
     typography_voice: SlideContent;
     brand_assets: SlideContent;
   };
-  recommendations: string[];
+  recommendations?: string[];
   color_palette: {
     primary: string;
     secondary: string;
     accent: string;
     background: string;
     text: string;
+    muted?: string;
+  };
+  typography?: {
+    heading: string;
+    body: string;
+    mono?: string;
   };
   mood_keywords: string[];
 }

@@ -10,27 +10,34 @@ interface SlideContent {
   title: string;
   subtitle?: string;
   key_points: string[];
-  visual_suggestion?: string;
   accent_color?: string;
+  font_primary?: string;
+  font_secondary?: string;
 }
 
 interface GeneratedSlides {
   product_name: string;
   tagline: string;
-  brand_story: string;
+  brand_story?: string;
   slides: {
     overview: SlideContent;
     visual_identity: SlideContent;
     typography_voice: SlideContent;
     brand_assets: SlideContent;
   };
-  recommendations: string[];
+  recommendations?: string[];
   color_palette: {
     primary: string;
     secondary: string;
     accent: string;
     background: string;
     text: string;
+    muted?: string;
+  };
+  typography?: {
+    heading: string;
+    body: string;
+    mono?: string;
   };
   mood_keywords: string[];
 }
@@ -73,8 +80,8 @@ export default function ResultsPage() {
 
   if (!data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="text-white text-xl">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-slate-500 text-xl">Loading...</div>
       </div>
     );
   }
@@ -84,8 +91,9 @@ export default function ResultsPage() {
     primary: "#4F46E5",
     secondary: "#818CF8",
     accent: "#EC4899",
-    background: "#F9FAFB",
+    background: "#FFFFFF",
     text: "#111827",
+    muted: "#6B7280",
   };
 
   const nextSlide = () => setCurrentSlide((prev) => Math.min(prev + 1, totalSlides - 1));
@@ -97,21 +105,24 @@ export default function ResultsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+    <div className="min-h-screen bg-slate-100 flex flex-col">
       {/* Header */}
-      <header className="p-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-white text-xl font-semibold">
-            {slides?.product_name || "Vibranding Studio"}
-          </h1>
-          {slides?.tagline && (
-            <p className="text-white/60 text-sm">{slides.tagline}</p>
-          )}
+      <header className="px-8 py-4 flex justify-between items-center bg-white border-b border-slate-200">
+        <div className="flex items-center gap-3">
+          <div 
+            className="w-8 h-8 rounded-lg"
+            style={{ backgroundColor: colorPalette.primary }}
+          />
+          <div>
+            <h1 className="text-slate-900 text-lg font-semibold">
+              {slides?.product_name || "Design System"}
+            </h1>
+          </div>
         </div>
         <Button
           onClick={handleStartOver}
           variant="outline"
-          className="border-white/20 text-white hover:bg-white/10"
+          className="text-slate-600 border-slate-300 hover:bg-slate-50"
         >
           Start Over
         </Button>
@@ -119,69 +130,53 @@ export default function ResultsPage() {
 
       {/* Slide Container */}
       <main className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-5xl aspect-[16/9] bg-white rounded-3xl shadow-2xl overflow-hidden relative">
+        <div className="w-full max-w-6xl aspect-[16/9] bg-white rounded-2xl shadow-xl overflow-hidden relative border border-slate-200">
           {/* Slide Content */}
           <div className="absolute inset-0">
-            {currentSlide === 0 && (
-              <Slide1Overview
-                slides={slides}
-                product={data.product}
-                colorPalette={colorPalette}
-              />
-            )}
-            {currentSlide === 1 && (
-              <Slide2VisualIdentity
-                slides={slides}
-                colorPalette={colorPalette}
-              />
-            )}
-            {currentSlide === 2 && (
-              <Slide3Typography
-                slides={slides}
-                colorPalette={colorPalette}
-              />
-            )}
-            {currentSlide === 3 && (
-              <Slide4BrandAssets
-                slides={slides}
-                colorPalette={colorPalette}
-              />
-            )}
+            {currentSlide === 0 && <Slide1Overview slides={slides} colorPalette={colorPalette} />}
+            {currentSlide === 1 && <Slide2Colors slides={slides} colorPalette={colorPalette} />}
+            {currentSlide === 2 && <Slide3Typography slides={slides} colorPalette={colorPalette} />}
+            {currentSlide === 3 && <Slide4Components slides={slides} colorPalette={colorPalette} />}
           </div>
 
           {/* Slide Number */}
-          <div className="absolute bottom-6 left-6 text-sm text-gray-400">
-            {currentSlide + 1} / {totalSlides}
+          <div className="absolute bottom-4 left-6 text-xs text-slate-400 font-mono">
+            {String(currentSlide + 1).padStart(2, '0')} / {String(totalSlides).padStart(2, '0')}
           </div>
         </div>
       </main>
 
       {/* Navigation */}
-      <footer className="p-6 flex justify-center gap-4">
+      <footer className="px-8 py-4 flex justify-center items-center gap-6 bg-white border-t border-slate-200">
         <Button
           onClick={prevSlide}
           disabled={currentSlide === 0}
-          className="px-8 py-6 rounded-full bg-white/10 text-white hover:bg-white/20 disabled:opacity-30"
+          variant="ghost"
+          className="text-slate-600 disabled:opacity-30"
         >
-          Previous
+          ← Previous
         </Button>
         <div className="flex items-center gap-2">
           {Array.from({ length: totalSlides }).map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrentSlide(i)}
-              className={`w-3 h-3 rounded-full transition-all ${
-                i === currentSlide ? "bg-white scale-125" : "bg-white/30 hover:bg-white/50"
+              className={`w-2 h-2 rounded-full transition-all ${
+                i === currentSlide 
+                  ? "w-6 rounded-full" 
+                  : "bg-slate-300 hover:bg-slate-400"
               }`}
+              style={i === currentSlide ? { backgroundColor: colorPalette.primary } : {}}
             />
           ))}
         </div>
         <Button
           onClick={nextSlide}
           disabled={currentSlide === totalSlides - 1}
-          className="px-8 py-6 rounded-full bg-white text-slate-900 hover:bg-white/90 disabled:opacity-30"
+          variant="ghost"
+          className="text-slate-600 disabled:opacity-30"
         >
-          Next
+          Next →
         </Button>
       </footer>
     </div>
@@ -191,300 +186,289 @@ export default function ResultsPage() {
 interface SlideProps {
   slides?: GeneratedSlides;
   colorPalette: GeneratedSlides["color_palette"];
-  product?: string;
 }
 
-// Slide 1: Brand Overview
-function Slide1Overview({ slides, product, colorPalette }: SlideProps) {
+// Slide 1: Brand Foundation
+function Slide1Overview({ slides, colorPalette }: SlideProps) {
   const slideData = slides?.slides?.overview;
-  const accentColor = slideData?.accent_color || colorPalette.primary;
 
   return (
-    <div
-      className="h-full p-12 flex flex-col"
-      style={{ background: `linear-gradient(135deg, ${accentColor}15 0%, white 100%)` }}
-    >
-      <span
-        className="text-sm font-medium uppercase tracking-wider mb-4"
-        style={{ color: accentColor }}
-      >
-        {slideData?.title || "Brand Overview"}
-      </span>
-
-      <h2 className="text-4xl font-bold text-slate-900 mb-3">
-        {slides?.product_name || product || "Your Brand"}
-      </h2>
-
-      {slides?.tagline && (
-        <p className="text-xl text-slate-600 mb-6 italic">"{slides.tagline}"</p>
-      )}
-
-      {slides?.brand_story && (
-        <p className="text-lg text-slate-600 mb-8 max-w-2xl">
-          {slides.brand_story}
+    <div className="h-full p-12 flex">
+      {/* Left: Title & Points */}
+      <div className="flex-1 flex flex-col justify-center pr-12">
+        <p className="text-xs font-mono uppercase tracking-widest text-slate-400 mb-3">
+          01 — Brand Foundation
         </p>
-      )}
-
-      <div className="grid grid-cols-2 gap-6 flex-1">
-        {/* Key Points */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
-            {slideData?.subtitle || "Brand Positioning"}
-          </h3>
-          <ul className="space-y-3">
-            {slideData?.key_points?.map((point, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span
-                  className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
-                  style={{ backgroundColor: accentColor }}
-                />
-                <span className="text-slate-700">{point}</span>
-              </li>
-            )) || (
-              <li className="text-slate-400">No key points generated</li>
-            )}
-          </ul>
+        <h1 className="text-5xl font-bold text-slate-900 mb-2">
+          {slides?.product_name || "Brand"}
+        </h1>
+        <p className="text-xl text-slate-500 mb-8">{slides?.tagline}</p>
+        
+        <div className="space-y-2">
+          {slideData?.key_points?.slice(0, 4).map((point, i) => (
+            <p key={i} className="text-slate-600 flex items-center gap-3">
+              <span 
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: colorPalette.primary }}
+              />
+              {point}
+            </p>
+          ))}
         </div>
+      </div>
 
-        {/* Mood Keywords */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
-            Brand Mood
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {slides?.mood_keywords?.map((keyword, i) => (
-              <span
-                key={i}
-                className="px-4 py-2 rounded-full text-sm font-medium"
-                style={{
-                  backgroundColor: `${accentColor}20`,
-                  color: accentColor,
-                }}
-              >
-                {keyword}
-              </span>
-            )) || (
-              <span className="text-slate-400">No mood keywords</span>
-            )}
-          </div>
+      {/* Right: Visual Preview */}
+      <div className="w-80 flex flex-col justify-center gap-4">
+        {/* Color Strip */}
+        <div className="flex rounded-xl overflow-hidden h-24 shadow-lg">
+          <div className="flex-1" style={{ backgroundColor: colorPalette.primary }} />
+          <div className="flex-1" style={{ backgroundColor: colorPalette.secondary }} />
+          <div className="flex-1" style={{ backgroundColor: colorPalette.accent }} />
+        </div>
+        
+        {/* Mood Tags */}
+        <div className="flex flex-wrap gap-2">
+          {slides?.mood_keywords?.slice(0, 4).map((keyword, i) => (
+            <span
+              key={i}
+              className="px-3 py-1 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: `${colorPalette.primary}15`,
+                color: colorPalette.primary,
+              }}
+            >
+              {keyword}
+            </span>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-// Slide 2: Visual Identity
-function Slide2VisualIdentity({ slides, colorPalette }: SlideProps) {
+// Slide 2: Color System
+function Slide2Colors({ slides, colorPalette }: SlideProps) {
   const slideData = slides?.slides?.visual_identity;
-  const accentColor = slideData?.accent_color || colorPalette.accent;
+  const colors = [
+    { name: "Primary", value: colorPalette.primary, desc: "Main brand color" },
+    { name: "Secondary", value: colorPalette.secondary, desc: "Supporting color" },
+    { name: "Accent", value: colorPalette.accent, desc: "Highlights & CTAs" },
+    { name: "Background", value: colorPalette.background, desc: "Page background" },
+    { name: "Text", value: colorPalette.text, desc: "Body text" },
+    { name: "Muted", value: colorPalette.muted || "#9CA3AF", desc: "Secondary text" },
+  ];
 
   return (
-    <div
-      className="h-full p-12 flex flex-col"
-      style={{ background: `linear-gradient(135deg, ${accentColor}15 0%, white 100%)` }}
-    >
-      <span
-        className="text-sm font-medium uppercase tracking-wider mb-4"
-        style={{ color: accentColor }}
-      >
-        {slideData?.title || "Visual Identity"}
-      </span>
-
-      <h2 className="text-4xl font-bold text-slate-900 mb-2">
-        Colors & Visual Style
-      </h2>
-      <p className="text-lg text-slate-500 mb-8">
-        {slideData?.subtitle || "Your brand's visual language"}
+    <div className="h-full p-12 flex flex-col">
+      <p className="text-xs font-mono uppercase tracking-widest text-slate-400 mb-2">
+        02 — Color System
       </p>
+      <h2 className="text-3xl font-bold text-slate-900 mb-8">
+        {slideData?.title || "Color Palette"}
+      </h2>
 
-      <div className="grid grid-cols-2 gap-6 flex-1">
-        {/* Color Palette */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
-            Recommended Color Palette
-          </h3>
-          <div className="space-y-3">
-            {Object.entries(colorPalette).map(([name, color]) => (
-              <div key={name} className="flex items-center gap-3">
-                <div
-                  className="w-12 h-12 rounded-xl shadow-md border border-slate-200"
-                  style={{ backgroundColor: color }}
-                />
-                <div>
-                  <p className="text-sm font-medium text-slate-700 capitalize">{name}</p>
-                  <p className="text-xs text-slate-400 uppercase">{color}</p>
-                </div>
-              </div>
-            ))}
+      {/* Color Grid */}
+      <div className="grid grid-cols-6 gap-4 mb-8">
+        {colors.map((color) => (
+          <div key={color.name} className="flex flex-col">
+            <div 
+              className="aspect-square rounded-xl shadow-md mb-3 border border-slate-100"
+              style={{ backgroundColor: color.value }}
+            />
+            <p className="text-sm font-medium text-slate-900">{color.name}</p>
+            <p className="text-xs text-slate-400 font-mono uppercase">{color.value}</p>
           </div>
-        </div>
+        ))}
+      </div>
 
-        {/* Key Points */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
-            Visual Guidelines
-          </h3>
-          <ul className="space-y-3">
-            {slideData?.key_points?.map((point, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span
-                  className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
-                  style={{ backgroundColor: accentColor }}
-                />
-                <span className="text-slate-700">{point}</span>
-              </li>
-            )) || (
-              <li className="text-slate-400">No visual guidelines generated</li>
-            )}
-          </ul>
+      {/* Usage Guidelines */}
+      <div className="mt-auto">
+        <div className="flex gap-6">
+          {slideData?.key_points?.slice(0, 4).map((point, i) => (
+            <p key={i} className="text-sm text-slate-500 flex items-start gap-2">
+              <span 
+                className="w-1 h-1 rounded-full mt-2 shrink-0"
+                style={{ backgroundColor: colorPalette.primary }}
+              />
+              {point}
+            </p>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-// Slide 3: Typography & Voice
+// Slide 3: Typography
 function Slide3Typography({ slides, colorPalette }: SlideProps) {
   const slideData = slides?.slides?.typography_voice;
-  const accentColor = slideData?.accent_color || colorPalette.secondary;
+  const typography = slides?.typography || { heading: "Inter", body: "Inter", mono: "JetBrains Mono" };
 
   return (
-    <div
-      className="h-full p-12 flex flex-col"
-      style={{ background: `linear-gradient(135deg, ${accentColor}15 0%, white 100%)` }}
-    >
-      <span
-        className="text-sm font-medium uppercase tracking-wider mb-4"
-        style={{ color: accentColor }}
-      >
-        {slideData?.title || "Typography & Voice"}
-      </span>
+    <div className="h-full p-12 flex">
+      {/* Left: Type Scale */}
+      <div className="flex-1 flex flex-col justify-center pr-12">
+        <p className="text-xs font-mono uppercase tracking-widest text-slate-400 mb-2">
+          03 — Typography
+        </p>
+        <h2 className="text-3xl font-bold text-slate-900 mb-8">
+          {slideData?.title || "Type System"}
+        </h2>
 
-      <h2 className="text-4xl font-bold text-slate-900 mb-2">
-        How Your Brand Speaks
-      </h2>
-      <p className="text-lg text-slate-500 mb-8">
-        {slideData?.subtitle || "Typography and tone of voice guidelines"}
-      </p>
-
-      <div className="grid grid-cols-2 gap-6 flex-1">
-        {/* Typography Preview */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
-            Typography Preview
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-slate-400 mb-1">Headline</p>
-              <p className="text-3xl font-bold" style={{ color: colorPalette.text }}>
-                {slides?.product_name || "Your Brand"}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 mb-1">Subheadline</p>
-              <p className="text-xl" style={{ color: colorPalette.text }}>
-                {slides?.tagline || "Your tagline here"}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 mb-1">Body Text</p>
-              <p className="text-base text-slate-600">
-                {slides?.brand_story?.slice(0, 100) || "Your brand story..."}...
-              </p>
-            </div>
+        <div className="space-y-6">
+          <div>
+            <p className="text-xs text-slate-400 mb-1 font-mono">Display / 48px</p>
+            <p className="text-5xl font-bold" style={{ color: colorPalette.text }}>
+              {slides?.product_name || "Headline"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400 mb-1 font-mono">Heading / 24px</p>
+            <p className="text-2xl font-semibold" style={{ color: colorPalette.text }}>
+              Section heading text
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400 mb-1 font-mono">Body / 16px</p>
+            <p className="text-base" style={{ color: colorPalette.muted || "#6B7280" }}>
+              Body text for paragraphs and descriptions.
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400 mb-1 font-mono">Caption / 12px</p>
+            <p className="text-xs font-mono" style={{ color: colorPalette.muted || "#6B7280" }}>
+              CAPTION AND LABEL TEXT
+            </p>
           </div>
         </div>
+      </div>
 
-        {/* Voice Guidelines */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
-            Voice & Tone
-          </h3>
-          <ul className="space-y-3">
-            {slideData?.key_points?.map((point, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span
-                  className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
-                  style={{ backgroundColor: accentColor }}
-                />
-                <span className="text-slate-700">{point}</span>
-              </li>
-            )) || (
-              <li className="text-slate-400">No voice guidelines generated</li>
-            )}
-          </ul>
+      {/* Right: Font Info */}
+      <div className="w-72 flex flex-col justify-center">
+        <div className="bg-slate-50 rounded-2xl p-6 space-y-4">
+          <div>
+            <p className="text-xs text-slate-400 mb-1">Headings</p>
+            <p className="text-lg font-semibold text-slate-900">{typography.heading}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400 mb-1">Body</p>
+            <p className="text-lg font-semibold text-slate-900">{typography.body}</p>
+          </div>
+          {typography.mono && (
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Monospace</p>
+              <p className="text-lg font-semibold text-slate-900 font-mono">{typography.mono}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 space-y-2">
+          {slideData?.key_points?.slice(0, 3).map((point, i) => (
+            <p key={i} className="text-xs text-slate-500 flex items-start gap-2">
+              <span 
+                className="w-1 h-1 rounded-full mt-1.5 shrink-0"
+                style={{ backgroundColor: colorPalette.primary }}
+              />
+              {point}
+            </p>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-// Slide 4: Brand Assets & Recommendations
-function Slide4BrandAssets({ slides, colorPalette }: SlideProps) {
+// Slide 4: Components
+function Slide4Components({ slides, colorPalette }: SlideProps) {
   const slideData = slides?.slides?.brand_assets;
-  const accentColor = slideData?.accent_color || "#F59E0B";
 
   return (
-    <div
-      className="h-full p-12 flex flex-col"
-      style={{ background: `linear-gradient(135deg, ${accentColor}15 0%, white 100%)` }}
-    >
-      <span
-        className="text-sm font-medium uppercase tracking-wider mb-4"
-        style={{ color: accentColor }}
-      >
-        {slideData?.title || "Brand Applications"}
-      </span>
-
-      <h2 className="text-4xl font-bold text-slate-900 mb-2">
-        Next Steps
-      </h2>
-      <p className="text-lg text-slate-500 mb-8">
-        {slideData?.subtitle || "How to apply your brand"}
+    <div className="h-full p-12 flex flex-col">
+      <p className="text-xs font-mono uppercase tracking-widest text-slate-400 mb-2">
+        04 — Components
       </p>
+      <h2 className="text-3xl font-bold text-slate-900 mb-8">
+        {slideData?.title || "UI Elements"}
+      </h2>
 
-      <div className="grid grid-cols-2 gap-6 flex-1">
-        {/* Application Guidelines */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
-            Application Guidelines
-          </h3>
-          <ul className="space-y-3">
-            {slideData?.key_points?.map((point, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span
-                  className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
-                  style={{ backgroundColor: accentColor }}
-                />
-                <span className="text-slate-700">{point}</span>
-              </li>
-            )) || (
-              <li className="text-slate-400">No application guidelines</li>
-            )}
-          </ul>
+      {/* Component Examples */}
+      <div className="flex-1 grid grid-cols-3 gap-6">
+        {/* Buttons */}
+        <div className="bg-slate-50 rounded-xl p-5">
+          <p className="text-xs text-slate-400 mb-4 font-mono">Buttons</p>
+          <div className="space-y-3">
+            <button 
+              className="w-full py-2.5 px-4 rounded-lg text-sm font-medium text-white"
+              style={{ backgroundColor: colorPalette.primary }}
+            >
+              Primary Action
+            </button>
+            <button 
+              className="w-full py-2.5 px-4 rounded-lg text-sm font-medium border-2"
+              style={{ borderColor: colorPalette.primary, color: colorPalette.primary }}
+            >
+              Secondary
+            </button>
+            <button 
+              className="w-full py-2.5 px-4 rounded-lg text-sm font-medium"
+              style={{ backgroundColor: `${colorPalette.primary}15`, color: colorPalette.primary }}
+            >
+              Tertiary
+            </button>
+          </div>
         </div>
 
-        {/* Recommendations */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 overflow-y-auto">
-          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
-            Recommendations
-          </h3>
-          <ul className="space-y-3">
-            {slides?.recommendations?.map((rec, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                  style={{ backgroundColor: accentColor }}
-                >
-                  {i + 1}
-                </span>
-                <span className="text-slate-700 text-sm">{rec}</span>
-              </li>
-            )) || (
-              <li className="text-slate-400">No recommendations generated</li>
-            )}
-          </ul>
+        {/* Input */}
+        <div className="bg-slate-50 rounded-xl p-5">
+          <p className="text-xs text-slate-400 mb-4 font-mono">Inputs</p>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs text-slate-600 mb-1">Label</p>
+              <input 
+                type="text" 
+                placeholder="Placeholder text"
+                className="w-full py-2 px-3 rounded-lg border border-slate-200 text-sm bg-white"
+              />
+            </div>
+            <div 
+              className="w-full py-2 px-3 rounded-lg border-2 text-sm bg-white"
+              style={{ borderColor: colorPalette.primary }}
+            >
+              <span style={{ color: colorPalette.text }}>Focused state</span>
+            </div>
+          </div>
         </div>
+
+        {/* Cards */}
+        <div className="bg-slate-50 rounded-xl p-5">
+          <p className="text-xs text-slate-400 mb-4 font-mono">Cards</p>
+          <div 
+            className="p-4 rounded-xl border bg-white shadow-sm"
+            style={{ borderColor: `${colorPalette.primary}20` }}
+          >
+            <div 
+              className="w-8 h-8 rounded-lg mb-3"
+              style={{ backgroundColor: colorPalette.accent }}
+            />
+            <p className="text-sm font-medium" style={{ color: colorPalette.text }}>Card Title</p>
+            <p className="text-xs mt-1" style={{ color: colorPalette.muted || "#6B7280" }}>
+              Supporting description text
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Guidelines */}
+      <div className="mt-6 flex gap-8">
+        {slideData?.key_points?.slice(0, 4).map((point, i) => (
+          <p key={i} className="text-xs text-slate-500 flex items-start gap-2">
+            <span 
+              className="w-1 h-1 rounded-full mt-1.5 shrink-0"
+              style={{ backgroundColor: colorPalette.primary }}
+            />
+            {point}
+          </p>
+        ))}
       </div>
     </div>
   );

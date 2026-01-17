@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,19 +8,20 @@ import { Textarea } from "@/components/ui/textarea";
 import LoadingState from "@/components/LoadingState";
 import LandingPage from "@/components/LandingPage";
 
-// Placeholder backend URL - update this when backend is ready
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+// Backend API URL - defaults to port 3001 where backend runs
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export default function Home() {
+  const router = useRouter();
   const [showLanding, setShowLanding] = useState(true);
   const [productDescription, setProductDescription] = useState("");
   const [references, setReferences] = useState<string[]>([]);
   const [newReference, setNewReference] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [loadingStep, setLoadingStep] = useState<"summary" | "color" | "typography" | "components" | "landing" | "logo">("summary");
   const [loadingDescription, setLoadingDescription] = useState<string>("This is the description.");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const addReference = () => {
     if (newReference.trim() !== "") {
@@ -44,11 +45,12 @@ export default function Home() {
     setReferences(references.filter((_, i) => i !== index));
   };
 
-  const handleSubmitWithStream = useCallback(async () => {
+  const handleSubmit = async () => {
     setIsLoading(true);
     setError(null);
-    setLoadingStep("Starting extraction...");
-    setActiveSession(null);
+    setLoadingStep("summary");
+    setLoadingDescription("Starting extraction...");
+    setPreviewUrl(null);
 
     // Include the new reference if it's not empty
     const validReferences = newReference.trim() !== "" 
@@ -56,7 +58,95 @@ export default function Home() {
       : references;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/branding`, {
+      // Step 1: Extract brand assets using streaming endpoint
+      const response = await fetch(`${API_BASE_URL}/branding/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          product: productDescription,
+          urls: validReferences,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let brandingData: any = null;
+
+      if (reader) {
+        let buffer = "";
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                // Handle session ready event - show preview
+                if (data.session?.debugUrl) {
+                  console.log("Session ready:", data.session);
+                  setPreviewUrl(data.session.debugUrl);
+                  setLoadingDescription("Extracting brand assets from website...");
+                }
+                
+                // Handle URL progress events
+                if (data.index !== undefined && data.url) {
+                  if (data.imageCount !== undefined) {
+                    setLoadingStep("color");
+                    setLoadingDescription(`Classifying ${data.imageCount} images...`);
+                  } else if (data.success === undefined) {
+                    try {
+                      const hostname = new URL(data.url).hostname;
+                      setLoadingDescription(`Extracting from ${hostname}...`);
+                    } catch {
+                      setLoadingDescription(`Extracting brand assets...`);
+                    }
+                  }
+                }
+                
+                // Handle final complete event
+                if (data.results) {
+                  brandingData = data;
+                  console.log("Extraction complete:", data);
+                }
+              } catch (e) {
+                // Ignore parse errors for incomplete chunks
+              }
+            }
+          }
+        }
+      }
+
+      if (!brandingData) {
+        throw new Error("No data received from extraction");
+      }
+
+      // Step 2: Generate personalized slides
+      setPreviewUrl(null);
+      setLoadingStep("typography");
+      setLoadingDescription("AI is crafting your brand presentation...");
+
+      const successfulResult = brandingData.results?.find((r: { success: boolean }) => r.success);
+      const brandData = successfulResult?.data || {};
+      const sourceUrls = brandingData.results
+        ?.filter((r: { success: boolean }) => r.success)
+        .map((r: { url: string }) => r.url) || [];
+
+      const slidesRes = await fetch(`${API_BASE_URL}/generate-slides`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -68,37 +158,31 @@ export default function Home() {
         }),
       });
 
+      if (!slidesRes.ok) {
+        const errorData = await slidesRes.json();
+        throw new Error(errorData.error || `Slide generation failed`);
+      }
+
       const slidesData = await slidesRes.json();
       console.log("Slides Data:", slidesData);
 
-      if (!slidesRes.ok) {
-        throw new Error(slidesData.error || `Slide generation failed`);
-      }
+      // Store and redirect
+      localStorage.setItem("brandingResponse", JSON.stringify({
+        ...brandingData,
+        generatedSlides: slidesData.slides,
+      }));
 
-      const data = await response.json();
-      console.log("Backend response:", data);
-      
-      // Update loading step and description based on backend response
-      // For now, using placeholder logic - update this based on your API response structure
-      if (data.step) {
-        setLoadingStep(data.step);
-      }
-      if (data.description) {
-        setLoadingDescription(data.description);
-      }
-      
-      // TODO: Handle successful response (navigate to results, show preview, etc.)
+      router.push("/results");
     } catch (err) {
       console.error("=== ERROR ===", err);
       setError(err instanceof Error ? err.message : "Something went wrong");
       setIsLoading(false);
-      setLoadingStep("");
-      setActiveSession(null);
+      setPreviewUrl(null);
     }
   };
 
   if (isLoading) {
-    return <LoadingState step={loadingStep} description={loadingDescription} />;
+    return <LoadingState step={loadingStep} description={loadingDescription} previewUrl={previewUrl} />;
   }
 
   if (showLanding) {
@@ -179,85 +263,13 @@ export default function Home() {
         {/* Submit Button */}
         <div className="flex flex-col items-center gap-4 pt-4">
           <Button
-            onClick={handleSubmitWithStream}
+            onClick={handleSubmit}
             disabled={isLoading || !productDescription.trim()}
             className="h-16 px-10 rounded-full bg-black text-white text-lg font-medium hover:bg-black/90 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? "Processing..." : "Start Branding"}
           </Button>
-          {isLoading && loadingStep && (
-            <p className="text-sm text-gray-600 animate-pulse">{loadingStep}</p>
-          )}
         </div>
-
-        {/* Live Preview & Progress */}
-        {isLoading && (
-          <div className="rounded-2xl bg-white p-8 space-y-6">
-            {/* URL Progress */}
-            {urlProgress.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">
-                  Extraction Progress
-                </h3>
-                {urlProgress.map((progress, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${
-                      progress.status === "complete" ? "bg-green-500" :
-                      progress.status === "error" ? "bg-red-500" :
-                      progress.status === "pending" ? "bg-gray-300" :
-                      "bg-blue-500 animate-pulse"
-                    }`} />
-                    <span className="text-sm text-gray-700 flex-1 truncate">
-                      {progress.url}
-                    </span>
-                    <span className="text-xs text-gray-500 capitalize">
-                      {progress.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Browserbase Live Preview */}
-            {activeSession?.debugUrl && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">
-                    Live Browser Preview
-                  </h3>
-                  <a
-                    href={activeSession.debugUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                  >
-                    Open in new tab
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                </div>
-                <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-900">
-                  <div className="aspect-video">
-                    <iframe
-                      src={activeSession.debugUrl}
-                      className="w-full h-full"
-                      allow="autoplay"
-                      title="Browserbase Live Session"
-                    />
-                  </div>
-                  <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/70 rounded-full px-3 py-1">
-                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                    <span className="text-xs text-white font-medium">LIVE</span>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 text-center">
-                  Watch the AI agent navigate and extract brand assets in real-time
-                </p>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

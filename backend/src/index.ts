@@ -6,6 +6,7 @@ const app = await buildApp();
 try {
   await app.listen({ port: config.port, host: "0.0.0.0" });
   app.log.info(`Backend listening on http://localhost:${config.port}`);
+  app.log.info(`Environment: ${process.env.NODE_ENV || "development"}`);
 } catch (err) {
   app.log.error({ err }, "Failed to start server");
   process.exit(1);

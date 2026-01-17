@@ -61,7 +61,7 @@ export default function LoadingState({ step, description }: LoadingStateProps) {
   }, [step]);
 
   return (
-    <div className="min-h-screen w-full bg-white flex flex-col items-center justify-center px-4 py-20">
+    <div className="min-h-screen w-full bg-white flex items-center justify-center px-4 py-20">
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8 max-w-2xl">
         {/* Icon */}
         <div className="shrink-0">

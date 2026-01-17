@@ -48,7 +48,7 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     setLoadingStep("summary");
-    setLoadingDescription("Starting extraction...");
+    setLoadingDescription("Extracting brand assets...");
 
     // Include the new reference if it's not empty
     const validReferences = newReference.trim() !== "" 
@@ -56,8 +56,8 @@ export default function Home() {
       : references;
 
     try {
-      // Step 1: Extract brand assets using streaming endpoint
-      const response = await fetch(`${API_BASE_URL}/branding/stream`, {
+      // Step 1: Extract brand assets
+      const brandingRes = await fetch(`${API_BASE_URL}/branding`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -68,72 +68,16 @@ export default function Home() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Request failed: ${response.statusText}`);
+      if (!brandingRes.ok) {
+        const errorData = await brandingRes.json();
+        throw new Error(errorData.error || `Request failed`);
       }
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let brandingData: any = null;
-
-      if (reader) {
-        let buffer = "";
-        
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                
-                // Handle session ready event
-                if (data.session?.debugUrl) {
-                  console.log("Session ready:", data.session);
-                  setLoadingDescription("Extracting brand assets from website...");
-                }
-                
-                // Handle URL progress events
-                if (data.index !== undefined && data.url) {
-                  if (data.imageCount !== undefined) {
-                    setLoadingStep("color");
-                    setLoadingDescription(`Classifying ${data.imageCount} images...`);
-                  } else if (data.success === undefined) {
-                    try {
-                      const hostname = new URL(data.url).hostname;
-                      setLoadingDescription(`Extracting from ${hostname}...`);
-                    } catch {
-                      setLoadingDescription(`Extracting brand assets...`);
-                    }
-                  }
-                }
-                
-                // Handle final complete event
-                if (data.results) {
-                  brandingData = data;
-                  console.log("Extraction complete:", data);
-                }
-              } catch (e) {
-                // Ignore parse errors for incomplete chunks
-              }
-            }
-          }
-        }
-      }
-
-      if (!brandingData) {
-        throw new Error("No data received from extraction");
-      }
+      const brandingData = await brandingRes.json();
+      console.log("Branding Data:", brandingData);
 
       // Step 2: Generate personalized slides
-      setLoadingStep("typography");
+      setLoadingStep("color");
       setLoadingDescription("AI is crafting your brand presentation...");
 
       const successfulResult = brandingData.results?.find((r: { success: boolean }) => r.success);

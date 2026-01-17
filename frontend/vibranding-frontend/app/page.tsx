@@ -8,8 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import LoadingState from "@/components/LoadingState";
 import LandingPage from "@/components/LandingPage";
 
-// Backend API URL - defaults to port 3001 where backend runs
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+// Backend API URL - uses proxy in production, direct in development
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:3001');
 
 export default function Home() {
   const router = useRouter();

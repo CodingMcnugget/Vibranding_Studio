@@ -6,3 +6,8 @@ dist/
 pnpm-lock.yaml
 pnpm-store/
 downloads/
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

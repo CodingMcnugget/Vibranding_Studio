@@ -105,7 +105,10 @@ export async function extractBrandAssets(
     // Capture Browserbase session info for live preview
     if (config.stagehand.env === "BROWSERBASE") {
       session.sessionId = stagehand.browserbaseSessionID;
-      session.sessionUrl = stagehand.browserbaseSessionURL;
+      // Note: browserbaseSessionURL might not be available in this version
+      session.sessionUrl = stagehand.browserbaseSessionID 
+        ? `https://browserbase.com/sessions/${stagehand.browserbaseSessionID}`
+        : undefined;
       session.debugUrl = `https://browserbase.com/sessions/${stagehand.browserbaseSessionID}`;
       
       console.log(`Browserbase session started: ${session.debugUrl}`);

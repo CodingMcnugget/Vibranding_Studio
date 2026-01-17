@@ -21,7 +21,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [loadingStep, setLoadingStep] = useState<"summary" | "color" | "typography" | "components" | "landing" | "logo">("summary");
   const [loadingDescription, setLoadingDescription] = useState<string>("This is the description.");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const addReference = () => {
     if (newReference.trim() !== "") {
@@ -50,7 +49,6 @@ export default function Home() {
     setError(null);
     setLoadingStep("summary");
     setLoadingDescription("Starting extraction...");
-    setPreviewUrl(null);
 
     // Include the new reference if it's not empty
     const validReferences = newReference.trim() !== "" 
@@ -96,10 +94,9 @@ export default function Home() {
               try {
                 const data = JSON.parse(line.slice(6));
                 
-                // Handle session ready event - show preview
+                // Handle session ready event
                 if (data.session?.debugUrl) {
                   console.log("Session ready:", data.session);
-                  setPreviewUrl(data.session.debugUrl);
                   setLoadingDescription("Extracting brand assets from website...");
                 }
                 
@@ -136,7 +133,6 @@ export default function Home() {
       }
 
       // Step 2: Generate personalized slides
-      setPreviewUrl(null);
       setLoadingStep("typography");
       setLoadingDescription("AI is crafting your brand presentation...");
 
@@ -177,12 +173,11 @@ export default function Home() {
       console.error("=== ERROR ===", err);
       setError(err instanceof Error ? err.message : "Something went wrong");
       setIsLoading(false);
-      setPreviewUrl(null);
     }
   };
 
   if (isLoading) {
-    return <LoadingState step={loadingStep} description={loadingDescription} previewUrl={previewUrl} />;
+    return <LoadingState step={loadingStep} description={loadingDescription} />;
   }
 
   if (showLanding) {
